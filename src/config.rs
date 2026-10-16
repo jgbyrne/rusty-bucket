@@ -18,7 +18,6 @@ pub struct BackendConfig {
 /// Filesystem-level settings (ownership, permissions, caching).
 #[derive(Clone, Debug)]
 pub struct FsConfig {
-    pub bucket: String,
     /// Normalized key prefix: either empty or ending in `/`.
     pub prefix: String,
     pub dir_mode: u32,

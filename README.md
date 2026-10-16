@@ -103,7 +103,6 @@ $ rusty-bucket --endpoint https://rgw.example.com:7480 mybucket:datasets/2024 /m
 | `--readahead SIZE` | Read-ahead per ranged GET (default `4M`). |
 | `--no-implicit-dir` | Assume all directories exist; skip the probe. |
 | `-o, --opt OPTION` | Extra FUSE mount option (repeatable). |
-| `-f, --foreground` | Accepted for goofys parity (always runs foreground). |
 
 Durations accept `s`, `m`, `h` suffixes (or a bare number of seconds). Sizes
 accept `K`, `M`, `G` suffixes.

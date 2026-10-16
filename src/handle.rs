@@ -21,18 +21,14 @@ struct ReadBuf {
 /// An open file. Keeps a read-ahead buffer so sequential reads share a single
 /// ranged `GetObject` request.
 pub struct FileHandle {
-    pub fh: u64,
-    pub ino: u64,
     pub key: String,
     pub size: u64,
     buf: Mutex<Option<ReadBuf>>,
 }
 
 impl FileHandle {
-    pub fn new(fh: u64, ino: u64, key: String, size: u64) -> Self {
+    pub fn new(key: String, size: u64) -> Self {
         Self {
-            fh,
-            ino,
             key,
             size,
             buf: Mutex::new(None),
@@ -85,7 +81,6 @@ impl FileHandle {
 /// An open directory. Entries are fetched lazily, page by page, via
 /// `ListObjectsV2` and cached for the lifetime of the handle.
 pub struct DirHandle {
-    pub fh: u64,
     pub ino: u64,
     pub prefix: String,
     entries: Mutex<Vec<DirEntry>>,
@@ -94,7 +89,7 @@ pub struct DirHandle {
 }
 
 impl DirHandle {
-    pub fn new(fh: u64, inode: &Inode) -> Self {
+    pub fn new(inode: &Inode) -> Self {
         let entries = vec![
             DirEntry {
                 ino: inode.id,
@@ -109,7 +104,6 @@ impl DirHandle {
         ];
 
         Self {
-            fh,
             ino: inode.id,
             prefix: inode.prefix.clone(),
             entries: Mutex::new(entries),

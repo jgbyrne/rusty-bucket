@@ -1,5 +1,4 @@
 use std::ffi::OsStr;
-use std::sync::Arc;
 
 use fuser::{
     AccessFlags, Errno, FileHandle, FileType, Filesystem, FopenFlags, Generation,
@@ -12,11 +11,11 @@ use crate::types::Kind;
 
 /// FUSE adapter around [`Mount`].
 pub struct RustyBucket {
-    mount: Arc<Mount>,
+    mount: Mount,
 }
 
 impl RustyBucket {
-    pub fn new(mount: Arc<Mount>) -> Self {
+    pub fn new(mount: Mount) -> Self {
         Self { mount }
     }
 

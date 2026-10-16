@@ -79,7 +79,7 @@ pub struct Mount {
 }
 
 impl Mount {
-    pub fn new(backend: S3Backend, rt: tokio::runtime::Handle, config: FsConfig) -> Arc<Self> {
+    pub fn new(backend: S3Backend, rt: tokio::runtime::Handle, config: FsConfig) -> Self {
         let root = Inode {
             id: ROOT_INO,
             parent: ROOT_INO,
@@ -99,7 +99,7 @@ impl Mount {
         inodes.insert(ROOT_INO, Arc::new(root));
 
         let cap = NonZeroUsize::new(CACHE_ENTRIES).expect("non-zero");
-        Arc::new(Mount {
+        Mount {
             backend,
             rt,
             config,
@@ -111,7 +111,7 @@ impl Mount {
             next_fh: AtomicU64::new(1),
             stat_cache: Mutex::new(LruCache::new(cap)),
             lookup_cache: Mutex::new(LruCache::new(cap)),
-        })
+        }
     }
 
     pub fn ttl(&self) -> std::time::Duration {
@@ -429,7 +429,7 @@ impl Mount {
 
         let fh = self.next_fh.fetch_add(1, Ordering::SeqCst);
         let size = inode.attr.lock().size;
-        let handle = Arc::new(FileHandle::new(fh, ino, inode.prefix.clone(), size));
+        let handle = Arc::new(FileHandle::new(inode.prefix.clone(), size));
         self.files.lock().insert(fh, handle);
         Ok(fh)
     }
@@ -455,7 +455,7 @@ impl Mount {
         }
 
         let fh = self.next_fh.fetch_add(1, Ordering::SeqCst);
-        let handle = Arc::new(DirHandle::new(fh, &inode));
+        let handle = Arc::new(DirHandle::new(&inode));
         self.dirs.lock().insert(fh, handle);
         Ok(fh)
     }

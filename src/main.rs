@@ -4,7 +4,6 @@
 
 use std::path::PathBuf;
 use std::process::ExitCode;
-use std::sync::Arc;
 
 use clap::Parser;
 use fuser::{Config, MountOption};
@@ -87,21 +86,14 @@ struct Cli {
     /// Additional FUSE mount option (may be repeated).
     #[arg(short = 'o', long = "opt", value_name = "OPTION")]
     fuse_opts: Vec<String>,
-
-    /// Run in the foreground (accepted for goofys compatibility; always true).
-    #[arg(short = 'f', long)]
-    foreground: bool,
 }
 
 fn run() -> anyhow::Result<()> {
     let cli = Cli::parse();
-    // fuser always runs in the foreground; the flag exists for goofys parity.
-    let _ = cli.foreground;
 
     let (bucket, prefix) = FsConfig::parse_bucket_spec(&cli.bucket);
 
     let fs_config = FsConfig {
-        bucket: bucket.clone(),
         prefix,
         dir_mode: parse_mode(&cli.dir_mode)?,
         file_mode: parse_mode(&cli.file_mode)?,
@@ -174,10 +166,4 @@ fn main() -> ExitCode {
             ExitCode::FAILURE
         }
     }
-}
-
-#[allow(dead_code)]
-fn assert_arc_send_sync() {
-    fn check<T: Send + Sync>() {}
-    check::<Arc<Mount>>();
 }

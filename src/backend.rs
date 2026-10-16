@@ -35,10 +35,6 @@ impl S3Backend {
         Self { client, bucket }
     }
 
-    pub fn bucket(&self) -> &str {
-        &self.bucket
-    }
-
     /// `HeadObject` for a single key.
     pub async fn head(&self, key: &str) -> Result<FileMeta> {
         let out = self

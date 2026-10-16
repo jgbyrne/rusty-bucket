@@ -9,9 +9,7 @@ pub enum Error {
     NotFound,
     NotDir,
     IsDir,
-    ReadOnly,
     PermissionDenied,
-    Io(String),
     Backend(String),
     Invalid(String),
 }
@@ -24,9 +22,7 @@ impl Error {
             Error::NotFound => Errno::ENOENT,
             Error::NotDir => Errno::ENOTDIR,
             Error::IsDir => Errno::EISDIR,
-            Error::ReadOnly => Errno::EROFS,
             Error::PermissionDenied => Errno::EACCES,
-            Error::Io(_) => Errno::EIO,
             Error::Backend(_) => Errno::EIO,
             Error::Invalid(_) => Errno::EINVAL,
         }
@@ -39,9 +35,7 @@ impl fmt::Display for Error {
             Error::NotFound => write!(f, "not found"),
             Error::NotDir => write!(f, "not a directory"),
             Error::IsDir => write!(f, "is a directory"),
-            Error::ReadOnly => write!(f, "read-only filesystem"),
             Error::PermissionDenied => write!(f, "permission denied"),
-            Error::Io(msg) => write!(f, "I/O error: {msg}"),
             Error::Backend(msg) => write!(f, "backend error: {msg}"),
             Error::Invalid(msg) => write!(f, "invalid argument: {msg}"),
         }
