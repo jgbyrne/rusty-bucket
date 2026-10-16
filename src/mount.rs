@@ -130,19 +130,12 @@ impl Mount {
         self.block_on(self.backend.get_range(key, start, len))
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub fn list(
-        &self,
-        prefix: &str,
-        delimiter: Option<&str>,
-        max_keys: Option<u32>,
-        token: Option<&str>,
-        start_after: Option<&str>,
-    ) -> Result<ListResult> {
-        self.block_on(
-            self.backend
-                .list(prefix, delimiter, max_keys, token, start_after),
-        )
+    pub fn list_page(&self, prefix: &str, token: Option<&str>) -> Result<ListResult> {
+        self.block_on(self.backend.list_page(prefix, token))
+    }
+
+    pub fn dir_has_entries(&self, prefix: &str) -> Result<bool> {
+        self.block_on(self.backend.dir_has_entries(prefix))
     }
 
     pub fn get(&self, id: u64) -> Option<Arc<Inode>> {
@@ -346,8 +339,7 @@ impl Mount {
             }
             Err(Error::NotFound) if self.config.implicit_dir => {
                 let dir_prefix = format!("{full}/");
-                let res = self.list(&dir_prefix, Some("/"), Some(1), None, None)?;
-                if res.items.is_empty() && res.prefixes.is_empty() {
+                if !self.dir_has_entries(&dir_prefix)? {
                     Err(Error::NotFound)
                 } else {
                     let mtime = SystemTime::now();

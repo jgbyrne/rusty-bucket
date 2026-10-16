@@ -127,7 +127,7 @@ impl DirHandle {
             }
 
             let token = self.token.lock().clone();
-            let page = mount.list(&self.prefix, Some("/"), None, token.as_deref(), None)?;
+            let page = mount.list_page(&self.prefix, token.as_deref())?;
 
             {
                 let mut entries = self.entries.lock();
@@ -177,8 +177,10 @@ impl DirHandle {
                 }
             }
 
+            // The last page is the one without a continuation token.
+            let done = page.next_token.is_none();
             *self.token.lock() = page.next_token;
-            *self.done.lock() = !page.is_truncated;
+            *self.done.lock() = done;
         }
     }
 }
