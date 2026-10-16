@@ -1,9 +1,9 @@
 use std::ffi::OsStr;
 
 use fuser::{
-    AccessFlags, Errno, FileHandle, FileType, Filesystem, FopenFlags, Generation,
-    INodeNo, KernelConfig, LockOwner, OpenAccMode, OpenFlags, ReplyAttr,
-    ReplyData, ReplyDirectory, ReplyEmpty, ReplyEntry, ReplyOpen, ReplyStatfs, Request,
+    AccessFlags, Errno, FileHandle, FileType, Filesystem, FopenFlags, Generation, INodeNo,
+    KernelConfig, LockOwner, OpenAccMode, OpenFlags, ReplyAttr, ReplyData, ReplyDirectory,
+    ReplyEmpty, ReplyEntry, ReplyOpen, ReplyStatfs, Request,
 };
 
 use crate::mount::Mount;
