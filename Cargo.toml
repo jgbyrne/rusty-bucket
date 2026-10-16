@@ -18,19 +18,15 @@ path = "src/lib.rs"
 [dependencies]
 anyhow = "1"
 aws-config = { version = "1", features = ["behavior-version-latest"] }
-aws-credential-types = "1"
 aws-sdk-s3 = "1"
 aws-smithy-http-client = { version = "1", features = ["default-client"] }
 aws-smithy-runtime-api = "1"
-bytes = "1"
 clap = { version = "4", features = ["derive"] }
 fuser = "0.18"
-futures = "0.3"
 libc = "0.2"
 lru = "0.12"
 parking_lot = "0.12"
-thiserror = "2"
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "io-util", "signal"] }
+tokio = { version = "1", features = ["rt-multi-thread"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
