@@ -13,5 +13,4 @@ pub enum Kind {
 pub struct FileMeta {
     pub size: u64,
     pub mtime: SystemTime,
-    pub etag: Option<String>,
 }

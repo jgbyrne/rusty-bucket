@@ -55,8 +55,7 @@ impl S3Backend {
             mtime: out
                 .last_modified()
                 .map(to_system_time)
-                .unwrap_or_else(SystemTime::now),
-            etag: out.e_tag().map(str::to_string),
+                .unwrap_or(SystemTime::UNIX_EPOCH),
         })
     }
 
@@ -125,7 +124,6 @@ impl S3Backend {
                         .last_modified()
                         .map(to_system_time)
                         .unwrap_or_else(SystemTime::now),
-                    etag: obj.e_tag().map(str::to_string),
                 };
                 Some((key, meta))
             })
