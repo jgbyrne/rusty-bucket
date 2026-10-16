@@ -8,27 +8,19 @@ use fuser::{FileAttr, FileType, INodeNo};
 use lru::LruCache;
 use parking_lot::{Mutex, RwLock};
 
-use crate::backend::{ListResult, S3Backend};
+use crate::backend::{FileMeta, ListResult, S3Backend};
 use crate::config::FsConfig;
 use crate::error::{Error, Result};
 use crate::handle::{DirEntry, DirHandle, FileHandle};
-use crate::types::{FileMeta, Kind};
 
 pub const ROOT_INO: u64 = 1;
 
 const CACHE_ENTRIES: usize = 4096;
 
-/// Cached, mutable attributes of an inode.
-#[derive(Clone, Copy, Debug)]
-pub struct Attr {
-    pub size: u64,
-    pub mtime: SystemTime,
-}
-
 /// A resolved type/prefix mapping used by the type cache.
 #[derive(Clone, Debug)]
 struct CachedEntry {
-    kind: Kind,
+    kind: FileType,
     prefix: String,
     size: u64,
     mtime: SystemTime,
@@ -40,10 +32,10 @@ pub struct Inode {
     pub id: u64,
     pub parent: u64,
     pub name: String,
-    pub kind: Kind,
+    pub kind: FileType,
     /// Full S3 key for files, or the prefix (ending in `/`) for directories.
     pub prefix: String,
-    pub attr: Mutex<Attr>,
+    pub attr: Mutex<FileMeta>,
     pub stat_time: Mutex<Option<Instant>>,
     /// Child inode ids (directories only). Used to reclaim the inodes that
     /// `readdir` interns but the kernel never looks up (the "inode leak" fixed
@@ -56,7 +48,7 @@ pub struct Inode {
 
 impl Inode {
     fn is_dir(&self) -> bool {
-        self.kind == Kind::Dir
+        self.kind == FileType::Directory
     }
 }
 
@@ -74,7 +66,7 @@ pub struct Mount {
     pub dirs: Mutex<HashMap<u64, Arc<DirHandle>>>,
     next_fh: AtomicU64,
 
-    stat_cache: Mutex<LruCache<String, (Instant, Attr)>>,
+    stat_cache: Mutex<LruCache<String, (Instant, FileMeta)>>,
     lookup_cache: Mutex<LruCache<(u64, String), (Instant, CachedEntry)>>,
 }
 
@@ -84,9 +76,9 @@ impl Mount {
             id: ROOT_INO,
             parent: ROOT_INO,
             name: String::new(),
-            kind: Kind::Dir,
+            kind: FileType::Directory,
             prefix: config.prefix.clone(),
-            attr: Mutex::new(Attr {
+            attr: Mutex::new(FileMeta {
                 size: 0,
                 mtime: SystemTime::now(),
             }),
@@ -148,7 +140,7 @@ impl Mount {
         &self,
         parent: u64,
         name: &str,
-        kind: Kind,
+        kind: FileType,
         prefix: String,
         size: u64,
         mtime: SystemTime,
@@ -171,8 +163,8 @@ impl Mount {
             name: name.to_string(),
             kind,
             prefix,
-            attr: Mutex::new(Attr { size, mtime }),
-            stat_time: Mutex::new(if kind == Kind::File {
+            attr: Mutex::new(FileMeta { size, mtime }),
+            stat_time: Mutex::new(if kind == FileType::RegularFile {
                 Some(Instant::now())
             } else {
                 None
@@ -186,7 +178,7 @@ impl Mount {
             .write()
             .insert((parent, name.to_string()), id);
 
-        if kind == Kind::Dir {
+        if kind == FileType::Directory {
             if let Some(parent_inode) = self.get(parent) {
                 parent_inode.children.lock().push(id);
             }
@@ -197,10 +189,10 @@ impl Mount {
 
     pub fn file_attr(&self, inode: &Inode) -> FileAttr {
         let attr = *inode.attr.lock();
-        let (kind, perm) = if inode.is_dir() {
-            (FileType::Directory, self.config.dir_mode)
+        let perm = if inode.is_dir() {
+            self.config.dir_mode
         } else {
-            (FileType::RegularFile, self.config.file_mode)
+            self.config.file_mode
         };
 
         FileAttr {
@@ -211,7 +203,7 @@ impl Mount {
             mtime: attr.mtime,
             ctime: attr.mtime,
             crtime: attr.mtime,
-            kind,
+            kind: inode.kind,
             perm: perm as u16,
             nlink: if inode.is_dir() { 2 } else { 1 },
             uid: self.config.uid,
@@ -223,28 +215,18 @@ impl Mount {
     }
 
     fn store_attr(&self, inode: &Inode, meta: &FileMeta) {
-        *inode.attr.lock() = Attr {
-            size: meta.size,
-            mtime: meta.mtime,
-        };
+        *inode.attr.lock() = *meta;
         *inode.stat_time.lock() = Some(Instant::now());
-        if inode.kind == Kind::File {
-            self.stat_cache.lock().put(
-                inode.prefix.clone(),
-                (
-                    Instant::now(),
-                    Attr {
-                        size: meta.size,
-                        mtime: meta.mtime,
-                    },
-                ),
-            );
+        if inode.kind == FileType::RegularFile {
+            self.stat_cache
+                .lock()
+                .put(inode.prefix.clone(), (Instant::now(), *meta));
         }
     }
 
     /// Refresh a file's attributes from S3 if the stat cache has expired.
     fn refresh_if_stale(&self, inode: &Inode) -> Result<()> {
-        if inode.kind != Kind::File {
+        if inode.kind != FileType::RegularFile {
             return Ok(());
         }
 
@@ -322,13 +304,20 @@ impl Mount {
 
         match self.head(&full) {
             Ok(meta) => {
-                let inode = self.intern(parent_id, name, Kind::File, full, meta.size, meta.mtime);
+                let inode = self.intern(
+                    parent_id,
+                    name,
+                    FileType::RegularFile,
+                    full,
+                    meta.size,
+                    meta.mtime,
+                );
                 self.store_attr(&inode, &meta);
                 self.cache_lookup(
                     parent_id,
                     name,
                     &CachedEntry {
-                        kind: Kind::File,
+                        kind: FileType::RegularFile,
                         prefix: inode.prefix.clone(),
                         size: meta.size,
                         mtime: meta.mtime,
@@ -343,13 +332,19 @@ impl Mount {
                     Err(Error::NotFound)
                 } else {
                     let mtime = SystemTime::now();
-                    let inode =
-                        self.intern(parent_id, name, Kind::Dir, dir_prefix.clone(), 0, mtime);
+                    let inode = self.intern(
+                        parent_id,
+                        name,
+                        FileType::Directory,
+                        dir_prefix.clone(),
+                        0,
+                        mtime,
+                    );
                     self.cache_lookup(
                         parent_id,
                         name,
                         &CachedEntry {
-                            kind: Kind::Dir,
+                            kind: FileType::Directory,
                             prefix: dir_prefix,
                             size: 0,
                             mtime,

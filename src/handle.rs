@@ -1,15 +1,15 @@
 use std::time::SystemTime;
 
+use fuser::FileType;
 use parking_lot::Mutex;
 
 use crate::error::Result;
 use crate::mount::{Inode, Mount};
-use crate::types::Kind;
 
 #[derive(Clone, Debug)]
 pub struct DirEntry {
     pub ino: u64,
-    pub kind: Kind,
+    pub kind: FileType,
     pub name: String,
 }
 
@@ -93,12 +93,12 @@ impl DirHandle {
         let entries = vec![
             DirEntry {
                 ino: inode.id,
-                kind: Kind::Dir,
+                kind: FileType::Directory,
                 name: ".".to_string(),
             },
             DirEntry {
                 ino: inode.parent,
-                kind: Kind::Dir,
+                kind: FileType::Directory,
                 name: "..".to_string(),
             },
         ];
@@ -141,14 +141,14 @@ impl DirHandle {
                     let inode = mount.intern(
                         self.ino,
                         name,
-                        Kind::Dir,
+                        FileType::Directory,
                         prefix.clone(),
                         0,
                         SystemTime::now(),
                     );
                     entries.push(DirEntry {
                         ino: inode.id,
-                        kind: Kind::Dir,
+                        kind: FileType::Directory,
                         name: name.to_string(),
                     });
                 }
@@ -164,14 +164,14 @@ impl DirHandle {
                     let inode = mount.intern(
                         self.ino,
                         name,
-                        Kind::File,
+                        FileType::RegularFile,
                         key.clone(),
                         meta.size,
                         meta.mtime,
                     );
                     entries.push(DirEntry {
                         ino: inode.id,
-                        kind: Kind::File,
+                        kind: FileType::RegularFile,
                         name: name.to_string(),
                     });
                 }

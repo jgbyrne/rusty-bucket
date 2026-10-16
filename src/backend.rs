@@ -10,7 +10,13 @@ use aws_smithy_runtime_api::http::Response;
 
 use crate::config::BackendConfig;
 use crate::error::{Error, Result};
-use crate::types::FileMeta;
+
+/// Size and modification time of an S3 object, as returned by HEAD or LIST.
+#[derive(Clone, Copy, Debug)]
+pub struct FileMeta {
+    pub size: u64,
+    pub mtime: SystemTime,
+}
 
 /// One page of a `/`-delimited `ListObjectsV2` call.
 #[derive(Clone, Debug, Default)]

@@ -14,7 +14,6 @@ mod error;
 mod fuse;
 mod handle;
 mod mount;
-mod types;
 
 use backend::{build_client, S3Backend};
 use config::{parse_duration, parse_mode, parse_size, BackendConfig, FsConfig};

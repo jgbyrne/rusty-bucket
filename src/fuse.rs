@@ -1,13 +1,12 @@
 use std::ffi::OsStr;
 
 use fuser::{
-    AccessFlags, Errno, FileHandle, FileType, Filesystem, FopenFlags, Generation, INodeNo,
-    KernelConfig, LockOwner, OpenAccMode, OpenFlags, ReplyAttr, ReplyData, ReplyDirectory,
-    ReplyEmpty, ReplyEntry, ReplyOpen, ReplyStatfs, Request,
+    AccessFlags, Errno, FileHandle, Filesystem, FopenFlags, Generation, INodeNo, KernelConfig,
+    LockOwner, OpenAccMode, OpenFlags, ReplyAttr, ReplyData, ReplyDirectory, ReplyEmpty,
+    ReplyEntry, ReplyOpen, ReplyStatfs, Request,
 };
 
 use crate::mount::Mount;
-use crate::types::Kind;
 
 /// FUSE adapter around [`Mount`].
 pub struct RustyBucket {
@@ -17,13 +16,6 @@ pub struct RustyBucket {
 impl RustyBucket {
     pub fn new(mount: Mount) -> Self {
         Self { mount }
-    }
-
-    fn kind_file_type(kind: Kind) -> FileType {
-        match kind {
-            Kind::File => FileType::RegularFile,
-            Kind::Dir => FileType::Directory,
-        }
     }
 }
 
@@ -161,12 +153,7 @@ impl Filesystem for RustyBucket {
 
         for (i, entry) in entries.iter().enumerate().skip(offset as usize) {
             let next = i as u64 + 1;
-            if reply.add(
-                INodeNo(entry.ino),
-                next,
-                RustyBucket::kind_file_type(entry.kind),
-                &entry.name,
-            ) {
+            if reply.add(INodeNo(entry.ino), next, entry.kind, &entry.name) {
                 break;
             }
         }
