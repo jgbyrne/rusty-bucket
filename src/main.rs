@@ -1,13 +1,26 @@
+//! rusty-bucket: a read-only FUSE filesystem for S3-compatible object stores
+//! (such as Ceph RGW). It is a read-only Rust port of
+//! [goofys](https://github.com/kahing/goofys).
+
 use std::path::PathBuf;
 use std::process::ExitCode;
 use std::sync::Arc;
 
 use clap::Parser;
 use fuser::{Config, MountOption};
-use rusty_bucket::backend::{build_client, S3Backend};
-use rusty_bucket::config::{parse_duration, parse_mode, parse_size, BackendConfig, FsConfig};
-use rusty_bucket::fuse::RustyBucket;
-use rusty_bucket::mount::Mount;
+
+mod backend;
+mod config;
+mod error;
+mod fuse;
+mod handle;
+mod mount;
+mod types;
+
+use backend::{build_client, S3Backend};
+use config::{parse_duration, parse_mode, parse_size, BackendConfig, FsConfig};
+use fuse::RustyBucket;
+use mount::Mount;
 
 /// A read-only FUSE filesystem for S3-compatible object stores (Ceph RGW).
 #[derive(Parser, Debug)]

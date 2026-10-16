@@ -11,10 +11,6 @@ readme = "README.md"
 name = "rusty-bucket"
 path = "src/main.rs"
 
-[lib]
-name = "rusty_bucket"
-path = "src/lib.rs"
-
 [dependencies]
 anyhow = "1"
 aws-config = { version = "1", features = ["behavior-version-latest"] }

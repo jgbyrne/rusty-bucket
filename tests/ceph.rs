@@ -28,6 +28,24 @@ use common::{pattern, read_all, MountGuard};
 
 const DEFAULT_BUCKET: &str = "rusty-bucket-ceph-test";
 
+/// HTTPS client that additionally trusts the PEM bundle at `ca_path`
+/// (a private Ceph RGW CA or self-signed certificate).
+fn tls_client_trusting(ca_path: &Path) -> aws_smithy_runtime_api::client::http::SharedHttpClient {
+    use aws_smithy_http_client::tls::rustls_provider::CryptoMode;
+    use aws_smithy_http_client::tls::{Provider, TlsContext, TrustStore};
+
+    let pem = fs::read(ca_path).expect("read CEPH_TEST_CACERT");
+    let trust_store = TrustStore::default().with_pem_certificate(pem);
+    let tls_context = TlsContext::builder()
+        .with_trust_store(trust_store)
+        .build()
+        .expect("build TLS context");
+    aws_smithy_http_client::Builder::new()
+        .tls_provider(Provider::Rustls(CryptoMode::AwsLc))
+        .tls_context(tls_context)
+        .build_https()
+}
+
 /// Keys with characters that must survive URL encoding.
 const SPECIAL: &[(&str, &str)] = &[
     ("with space.txt", "space"),
@@ -85,8 +103,7 @@ impl Ceph {
                 aws_sdk_s3::config::ResponseChecksumValidation::WhenRequired,
             );
         if let Some(ca) = &self.cacert {
-            builder = builder
-                .http_client(rusty_bucket::backend::custom_http_client(ca).expect("TLS client"));
+            builder = builder.http_client(tls_client_trusting(ca));
         }
         Client::from_conf(builder.build())
     }
