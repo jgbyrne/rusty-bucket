@@ -61,6 +61,8 @@
             nativeBuildInputs = buildDeps ++ [ pkgs.makeWrapper ];
             doCheck = true;
 
+            CARGO_PROFILE = "debug";
+
             # Make `fusermount3` available to the mount helper at runtime.
             postInstall = ''
               wrapProgram $out/bin/rusty-bucket \
@@ -114,12 +116,6 @@
             docker-client
             openssl
           ]);
-
-          shellHook = ''
-            echo "rusty-bucket dev shell"
-            echo "  rustc: $(rustc --version)"
-            echo "  fuse:  $(command -v fusermount3 || echo 'missing')"
-          '';
         };
 
         checks = {
